@@ -1,15 +1,17 @@
-{-# LANGUAGE TypeOperators #-}
 {-# LANGUAGE DataKinds     #-}
+{-# LANGUAGE TypeOperators #-}
 
 module Api where
 
-import qualified Model as M
-import qualified Storage as S
-import Data.Aeson
-import Control.Monad.IO.Class     (MonadIO, liftIO)
-import Control.Monad.Trans.Either
-import Servant
-import Database.SQLite.Simple as Sql
+import           Control.Monad.IO.Class              (MonadIO, liftIO)
+import           Control.Monad.Trans.Either
+import           Data.Aeson
+import           Database.SQLite.Simple              as Sql
+import qualified Model                               as M
+import           Servant
+import           Servant.Auth.Server
+import           Servant.Auth.Server.SetCookieOrphan ()
+import qualified Storage                             as S
 
 instance ToJSON M.Artist
 instance FromJSON M.Artist
@@ -27,11 +29,12 @@ type ArtistAPI =
   :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] M.Artist
   :<|> Capture "artistId" Int :> Delete '[] ()
 
-
-
 artistsServer :: Sql.Connection -> Server ArtistAPI
-artistsServer conn =
-  getArtists :<|> postArtist :<|> getArtist :<|>  updateArtist :<|> deleteArtist
+artistsServer conn = getArtists
+  :<|> postArtist
+  :<|> getArtist
+  :<|> updateArtist
+  :<|> deleteArtist
 
   where
     getArtists                   = liftIO $ S.findArtists conn
@@ -69,7 +72,7 @@ liftIOMaybeToEither err x = do
     m <- liftIO x
     case m of
       Nothing -> left err
-      Just x -> right x
+      Just x  -> right x
 
 
 
@@ -77,7 +80,6 @@ type API = "artists" :> ArtistAPI :<|> "albums" :> AlbumAPI
 
 combinedServer :: Sql.Connection -> Server API
 combinedServer conn = artistsServer conn :<|> albumsServer conn
-
 
 
 api :: Proxy API
