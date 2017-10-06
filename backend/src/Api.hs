@@ -33,14 +33,14 @@ instance ElmType M.Track
 
 
 type ArtistAPI = Get '[JSON] [M.Artist]
-  -- :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
+                 :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
   -- :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
   -- :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] M.Artist
   -- :<|> Capture "artistId" Int :> Delete '[] ()
 
 
 artistsServer :: Sql.Connection -> Server ArtistAPI
-artistsServer conn = getArtists conn
+artistsServer conn = getArtists conn :<|> getArtist conn
   -- :<|> getArtist -- :<|> postArtist :<|>  updateArtist :<|> deleteArtist
 
   --where
@@ -53,9 +53,8 @@ artistsServer conn = getArtists conn
 getArtists :: Sql.Connection -> Handler [M.Artist]
 getArtists conn = liftIO $ S.findArtists conn
 
--- getArtist :: Sql.Connection -> Int -> Handler M.Artist
--- getArtist conn artistId = S.artistById conn artistId
-
+--getArtist :: Sql.Connection -> Int -> Handler M.Artist
+getArtist conn artistId = return S.artistById conn artistId
 
 
 type AlbumAPI = Get '[JSON] [M.Album]
@@ -89,7 +88,6 @@ liftIOMaybeToEither err x = do
     case m of
       Nothing -> left err
       Just x  -> right x
-
 
 
 type API = "artists" :> ArtistAPI :<|> "albums" :> AlbumAPI
