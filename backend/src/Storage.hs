@@ -2,15 +2,15 @@
 module Storage where
 
 
-import qualified Model as M
-import qualified Data.Text as Txt
-import qualified Data.Map.Strict as Map
-import Control.Monad
-import Data.Maybe
+import           Control.Monad
+import qualified Data.Map.Strict              as Map
+import           Data.Maybe
+import qualified Data.Text                    as Txt
+import qualified Model                        as M
 
 
-import Database.SQLite.Simple as Sql
-import Database.SQLite.Simple.Types as SqlTypes
+import           Database.SQLite.Simple       as Sql
+import           Database.SQLite.Simple.Types as SqlTypes
 
 
 instance Sql.FromRow M.Artist where
@@ -18,7 +18,6 @@ instance Sql.FromRow M.Artist where
 
 instance Sql.FromRow M.Track where
   fromRow = M.Track <$> Sql.field <*> Sql.field <*> Sql.field
-
 
 
 artistById :: Sql.Connection -> Int -> IO (Maybe M.Artist)
@@ -190,4 +189,3 @@ findById conn table idParam = do
 createFindByIdQuery :: String -> SqlTypes.Query
 createFindByIdQuery table =
   SqlTypes.Query $ Txt.pack $ "SELECT * from " ++ table ++ " where id = :id"
-

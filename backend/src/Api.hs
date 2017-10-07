@@ -32,57 +32,33 @@ instance ElmType M.Album
 instance ElmType M.Track
 
 
-type ArtistAPI = Get '[JSON] [M.Artist]
-                 :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
-  -- :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
-  -- :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] M.Artist
-  -- :<|> Capture "artistId" Int :> Delete '[] ()
-
+type ArtistAPI =
+       Get '[JSON] [M.Artist]
+  :<|> Capture "artistId" Int :> Get '[JSON] (Maybe M.Artist)
+  :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
 
 artistsServer :: Sql.Connection -> Server ArtistAPI
-artistsServer conn = getArtists conn :<|> getArtist conn
-  -- :<|> getArtist -- :<|> postArtist :<|>  updateArtist :<|> deleteArtist
-
-  --where
-    -- getArtists                   = liftIO $ S.findArtists conn
-    -- getArtist artistId           = liftIOMaybeToEither err404 $
-    -- postArtist artist            = liftIO $ S.newArtist conn artist
-    -- updateArtist artistId artist = liftIO $ S.updateArtist conn artist artistId
-    -- deleteArtist artistId        = liftIO $ S.deleteArtist conn artistId
+artistsServer conn = getArtists conn :<|> getArtist conn :<|> postArtist conn
 
 getArtists :: Sql.Connection -> Handler [M.Artist]
 getArtists conn = liftIO $ S.findArtists conn
 
---getArtist :: Sql.Connection -> Int -> Handler M.Artist
-getArtist conn artistId = return S.artistById conn artistId
+postArtist :: Sql.Connection -> M.Artist -> Handler M.Artist
+postArtist conn artist = liftIO $ S.newArtist conn artist
+
+getArtist :: Sql.Connection -> Int -> Handler (Maybe M.Artist)
+getArtist conn artistId = liftIO $ S.artistById conn artistId
 
 
 type AlbumAPI = Get '[JSON] [M.Album]
-  -- QueryParam "artistId" Int :> Get '[JSON] [M.Album]
-  -- :<|> ReqBody '[JSON] M.Album :> Post '[JSON] M.Album
-  -- :<|> Capture "albumId" Int :> ReqBody '[JSON] M.Album :> Put '[JSON] M.Album
-  -- :<|> Capture "albumId" Int :> Get '[JSON] M.Album
-  -- :<|> Capture "albumId" Int :> Delete '[] ()
-
 
 albumsServer :: Sql.Connection -> Server AlbumAPI
 albumsServer conn = getAlbums conn
-  -- :<|> postAlbum :<|> updateAlbum :<|> getAlbum :<|> deleteAlbum
-
-  -- where
-  --   getAlbums artistId            = liftIO $ case artistId of
-  --                                             Nothing -> S.findAlbums conn
-  --                                             Just x -> S.findAlbumsByArtist conn x
-  --   postAlbum album               = liftIO $ Sql.withTransaction conn $ S.newAlbum conn album
-  --   updateAlbum albumId album     = liftIOMaybeToEither err404 $ Sql.withTransaction conn $ S.updateAlbum conn album albumId
-  --   getAlbum albumId              = liftIOMaybeToEither err404 $ S.albumById conn albumId
-  --   deleteAlbum albumId           = liftIO $ Sql.withTransaction conn $ S.deleteAlbum conn albumId
 
 getAlbums :: Sql.Connection -> Handler [M.Album]
 getAlbums conn = liftIO $ S.findAlbums conn
 
-
-liftIOMaybeToEither ::  (MonadIO m) => a -> IO (Maybe b) -> EitherT a m b
+liftIOMaybeToEither :: (MonadIO m) => a -> IO (Maybe b) -> EitherT a m b
 liftIOMaybeToEither err x = do
     m <- liftIO x
     case m of
@@ -95,6 +71,8 @@ type API = "artists" :> ArtistAPI :<|> "albums" :> AlbumAPI
 combinedServer :: Sql.Connection -> Server API
 combinedServer conn = artistsServer conn :<|> albumsServer conn
 
-
 api :: Proxy API
 api = Proxy
+
+
+-- (Handler a) equivalent to a computation of type (IO (Either ServantErr a))
