@@ -34,7 +34,7 @@ instance ElmType M.Track
 
 type ArtistAPI =
        Get '[JSON] [M.Artist]
-  :<|> Capture "artistId" Int :> Get '[JSON] (Maybe M.Artist)
+  :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
   :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
 
 artistsServer :: Sql.Connection -> Server ArtistAPI
@@ -46,9 +46,12 @@ getArtists conn = liftIO $ S.findArtists conn
 postArtist :: Sql.Connection -> M.Artist -> Handler M.Artist
 postArtist conn artist = liftIO $ S.newArtist conn artist
 
-getArtist :: Sql.Connection -> Int -> Handler (Maybe M.Artist)
-getArtist conn artistId = liftIO $ S.artistById conn artistId
-
+getArtist :: Sql.Connection -> Int -> Handler M.Artist
+getArtist conn artistId = do
+  artist <- liftIO $ S.artistById conn artistId
+  case artist of
+    Nothing -> throwError err404
+    Just a  -> return a
 
 type AlbumAPI = Get '[JSON] [M.Album]
 
