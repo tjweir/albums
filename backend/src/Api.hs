@@ -16,7 +16,8 @@ import           Elm                        (Spec (Spec), specsToDir,
 import           GHC.Generics               (Generic)
 import qualified Model                      as M
 import           Servant
-import           Servant.API                ((:>), Capture, Get, JSON)
+import           Servant.API                ((:>), Capture, Get, JSON,
+                                             NoContent)
 import           Servant.Elm                (ElmType, Proxy (Proxy),
                                              defElmImports, generateElmForAPI)
 import qualified Storage                    as S
@@ -36,9 +37,16 @@ type ArtistAPI =
        Get '[JSON] [M.Artist]
   :<|> Capture "artistId" Int :> Get '[JSON] M.Artist
   :<|> ReqBody '[JSON] M.Artist :> Post '[JSON] M.Artist
+  :<|> Capture "artistId" Int :> ReqBody '[JSON] M.Artist :> Put '[JSON] M.Artist
+  :<|> Capture "artistId" Int :> DeleteNoContent '[JSON] NoContent
 
 artistsServer :: Sql.Connection -> Server ArtistAPI
-artistsServer conn = getArtists conn :<|> getArtist conn :<|> postArtist conn
+artistsServer conn =
+       getArtists conn
+  :<|> getArtist conn
+  :<|> postArtist conn
+  :<|> updateArtist conn
+  :<|> deleteArtist conn
 
 getArtists :: Sql.Connection -> Handler [M.Artist]
 getArtists conn = liftIO $ S.findArtists conn
@@ -52,6 +60,15 @@ getArtist conn artistId = do
   case artist of
     Nothing -> throwError err404
     Just a  -> return a
+
+updateArtist :: Sql.Connection -> Int -> M.Artist -> Handler M.Artist
+updateArtist conn artistId artist = liftIO $ S.updateArtist conn artist artistId
+
+deleteArtist :: Sql.Connection -> Int -> Handler NoContent
+deleteArtist conn artistId = do
+  liftIO $ S.deleteArtist conn artistId
+  return NoContent
+
 
 type AlbumAPI = Get '[JSON] [M.Album]
 
